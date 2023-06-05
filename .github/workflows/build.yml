@@ -1,11 +1,8 @@
 name: Container build
 "on":
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "IRRd version (should available in pypi)"
-        required: true
-        default: "4.2.8"
+  push:
+    tags:
+      - "*" # Push events to any tag
 
 jobs:
   build:
@@ -25,8 +22,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/irrd
           tags: |
-            # pick up tag provided from workflow_dispatch user's input
-            type=raw,value=${{ inputs.tag }}
+            type=pep440,pattern={{version}}
+            type=ref,event=tag
+            type=ref,event=branch
             # git short commit
             type=sha
 
@@ -42,5 +40,5 @@ jobs:
         with:
           context: .
           push: true
-          build-args: "IRRD_VERSION=${{ inputs.tag }}"
+          build-args: "IRRD_VERSION=${{ github.ref_name }}"
           tags: ${{ steps.meta.outputs.tags }}
