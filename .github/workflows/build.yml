@@ -1,0 +1,47 @@
+name: Container build
+"on":
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "IRRd version (should available in pypi)"
+        required: true
+        default: "4.2.8"
+
+jobs:
+  build:
+    name: Build container
+    runs-on: ubuntu-22.04
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/irrd
+          tags: |
+            # pick up tag provided from workflow_dispatch user's input
+            type=raw,value=${{ inputs.tag }}
+            # git short commit
+            type=sha
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          build-args: "IRRD_VERSION=${{ inputs.tag }}"
+          tags: ${{ steps.meta.outputs.tags }}
